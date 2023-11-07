@@ -120,26 +120,49 @@ async function run() {
 
     app.post("/booking", async (req, res) => {
       const book = req.body;
-
-      // console.log(book)
-
-      // const find = await bookingCollection.findOne(book);
-
-      // console.log(find)
-      // if (!find) {
-      //    const result = await bookingCollection.insertOne(book);
-      //    res.send(result);
-      // }
-
-      // else {
-      //     res.send('duplicate')
-      // }
-
-      // console.log(result);
-
       const result = await bookingCollection.insertOne(book);
       res.send(result);
     });
+
+
+    app.get("/booking", async (req, res) => {
+      try {
+
+        
+
+        let query = {};
+        if (req.query?.email) {
+          query = { email: req.query.email };
+          const result = await bookingCollection.find(query).toArray();
+          res.send(result);
+        } else {
+          const cursor = bookingCollection.find();
+          const result = await cursor.toArray();
+          res.send(result);
+        }
+
+    
+      } catch (error) {
+        console.log(error.message);
+      }
+    });
+
+
+    app.patch('/booking', async(req,res)=>{
+      const user = req.body;
+      const filter = { serviceProviderEmail: user.email };
+      
+      const updateDoc = {
+        $set:{
+          status: user.status
+        }
+      }
+      const result = await bookingCollection.updateOne(filter,updateDoc);
+
+
+      res.send(result)
+      
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
