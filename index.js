@@ -148,10 +148,18 @@ async function run() {
     });
 
 
-    app.patch('/booking', async(req,res)=>{
+    app.patch('/booking/:id', async(req,res)=>{
       const user = req.body;
-      const filter = { serviceProviderEmail: user.email };
-      
+
+      const id = req.params.id;
+      console.log(id);
+
+      console.log(user)
+      const filter = {_id: new ObjectId(id)};
+
+
+      // const filter = { serviceProviderEmail: user.email };
+      // console.log(filter)
       const updateDoc = {
         $set:{
           status: user.status
