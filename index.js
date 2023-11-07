@@ -1,5 +1,8 @@
 const express = require("express");
 const cors = require("cors");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -7,10 +10,22 @@ require("dotenv").config();
 
 //middleware
 
-app.use(cors());
+const corsOptions = {
+  // origin: '*',
+  origin: ["http://localhost:5173", "http://localhost:5174"],
+  credentials: true,
+  optionSuccessStatus: 200,
+};
+app.use(cors(corsOptions))
 app.use(express.json());
+app.use(cookieParser());
 
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+// app.use((req, res, next) => {
+//   res.header("Access-Control-Allow-Origin", "*");
+//   next();
+// });
+
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS_KEY}@cluster0.c3eejtp.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -25,10 +40,36 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const serviceCollection = client.db("ChildCoDB").collection("services");
     const bookingCollection = client.db("ChildCoDB").collection("booking");
+
+
+
+    //jwt
+
+    app.post('/jwt', async(req,res)=>{
+      const user = req.body;
+      // console.log(user);
+      const token = jwt.sign(user, process.env.SECRET_TOKEN,{expiresIn: '1h'});
+      res
+      .cookie('token', token, {
+        httpOnly: true,
+        secure: false,
+        // sameSite: 'none'
+      })
+      .send({success:true})
+    })
+
+
+
+
+    app.get('/logout', async(req,res)=>{
+      
+      res.clearCookie('token',{maxAge:0})
+      .send({success:true})
+    })
 
     //post services
 
@@ -37,7 +78,9 @@ async function run() {
         const service = req.body;
         const result = await serviceCollection.insertOne(service);
         res.send(result);
-      } catch (error) {}
+      } catch (error) {
+        console.log(error.message)
+      }
     });
 
     app.put("/services/:id", async (req, res) => {
