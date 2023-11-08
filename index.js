@@ -1,21 +1,38 @@
 const express = require("express");
-const cors = require("cors");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const jwt = require('jsonwebtoken')
-const cookieParser = require('cookie-parser');
 const app = express();
+const cors = require("cors");
+require("dotenv").config();
+
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+
 const port = process.env.PORT || 5000;
 
-require("dotenv").config();
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser');
+
+
+
+
 
 //middleware
 
 const corsOptions = {
   // origin: '*',
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://child-co-client.web.app",
+  ],
   credentials: true,
   optionSuccessStatus: 200,
 };
+// const corsOptions = {
+//   // origin: '*',
+//   origin: ["https://child-co-client.web.app"],
+//   credentials: true,
+//   optionSuccessStatus: 200,
+// };
+
 app.use(cors(corsOptions))
 app.use(express.json());
 app.use(cookieParser());
@@ -49,17 +66,42 @@ async function run() {
 
     //jwt
 
+
+    const  verifyToken = (req,res,next)=>{
+      const token = req.cookie?.token;
+     
+      if(!token){
+        return res.status(401).send({message:'unauthorized access'})
+      }
+
+      jwt.verify(token, process.env.SECRET_TOKEN,(err,decoded)=>{
+        if(err) {
+        
+          return res.status(401).send({message: 'unauthorized'})
+        }
+        req.user = decoded;
+        next();
+      })
+    }
+
     app.post('/jwt', async(req,res)=>{
       const user = req.body;
       // console.log(user);
       const token = jwt.sign(user, process.env.SECRET_TOKEN,{expiresIn: '1h'});
+      // res
+      // .cookie('token', token, {
+      //   httpOnly: true,
+      //   secure: false,
+      //   // sameSite: 'none'
+      // })
+      // .send({success:true})
       res
-      .cookie('token', token, {
-        httpOnly: true,
-        secure: false,
-        // sameSite: 'none'
-      })
-      .send({success:true})
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
     })
 
 
@@ -125,7 +167,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get("/services", async (req, res) => {
+    app.get("/services",async (req, res) => {
       try {
         // const cursor = serviceCollection.find();
         // const result = await cursor.toArray();
